@@ -35,8 +35,8 @@ SpriteTable.prototype.freeSprite = function(sprite) {
 
 initializeBad = function(sprite) {
 	sprite.image = game.assets['imgs/bad.png'];
-	sprite.x = 330;
-	sprite.y = randInt(200);
+	sprite.x = game.width;
+	sprite.y = randInt(game.height);
 	sprite.width = 20;
 	sprite.height = 20;
 	sprite.frame = 2 * randInt(2);// either 0 or 2
@@ -54,8 +54,16 @@ initializeBullet = function(sprite, mainChar) {
 	sprite.gameExtras.characterType = "playerBullet";
 }
 
+var bulletSpeed = 3;
+var playerSpeed = 1.25;
+var enemySpeed = 1;
+var playerFallingSpeedX = 1;
+var playerFallingSpeedY = 2;
+var enemyFallingSpeedX = 1;
+var enemyFallingSpeedY = 2;
+
 doFrame = function() {
-	if (randInt(10) < 1) {
+	if (randInt(10) < 2) {
 		var badChar = spriteTable.getNewSprite();
 		if (badChar != null) initializeBad(badChar);
 	}
@@ -65,23 +73,21 @@ doFrame = function() {
 	for (var i = 0; i < spriteTable.sprites.length; i++) {
 		spr = spriteTable.sprites[i]; 
 		if (spr.gameExtras.inUse) {
-			var speed = 1;
-
 			switch (spr.gameExtras.characterType) {
 			case  "player":
 				if (spr.gameExtras.alive) {
 					if (spr.gameExtras.framesUntilBullet > 0) spr.gameExtras.framesUntilBullet --;
 
 					if(game.input.left && !game.input.right){
-						spr.x -= speed;
+						spr.x -= playerSpeed;
 					} else if(game.input.right && !game.input.left){
-						spr.x += speed;
+						spr.x += playerSpeed;
 					}
 
 					if (game.input.up && !game.input.down){
-						spr.y -= speed;
+						spr.y -= playerSpeed;
 					} else if(game.input.down && !game.input.up){
-						spr.y += speed;
+						spr.y += playerSpeed;
 					}
 
 					// shoot bullets
@@ -99,6 +105,7 @@ doFrame = function() {
 						if (sprEnemy.gameExtras.inUse && sprEnemy.gameExtras.characterType == "enemy") {
 							if (spr.intersect(sprEnemy)) {
 								spr.gameExtras.alive = false;
+								spr.frame ++;
 								break;
 							}
 						}
@@ -106,7 +113,8 @@ doFrame = function() {
 					
 				} else {
 					// not alive
-					spr.y += speed * 2;
+					spr.x += playerFallingSpeedX;
+					spr.y += playerFallingSpeedY;
 				}
 				break;
 			case  "enemy":
@@ -120,6 +128,7 @@ doFrame = function() {
 						if (sprBullet.gameExtras.inUse && sprBullet.gameExtras.characterType == "playerBullet") {
 							if (spr.intersect(sprBullet)) {
 								spr.gameExtras.alive = false;
+								spr.frame ++;
 								spriteTable.freeSprite(sprBullet);// remove bullet
 								break;
 							}
@@ -127,13 +136,14 @@ doFrame = function() {
 					}
 				} else {
 					// dead enemy
-					spr.y += 2;
-					if (spr.y > 600) spriteTable.freeSprite(spr);// TODO: test for actual screen height
+					spr.x -= enemyFallingSpeedX;
+					spr.y += enemyFallingSpeedY;
+					if (spr.y > game.height) spriteTable.freeSprite(spr);
 				}
 				break;
 			case  "playerBullet":
-				spr.x += 1.3;
-				if (spr.x > 600) spriteTable.freeSprite(spr); // TODO: test for actual screen width
+				spr.x += bulletSpeed;
+				if (spr.x > game.width) spriteTable.freeSprite(spr);
 			}
 		}
 	}
@@ -143,14 +153,14 @@ var game;
 var spriteTable;
 
 window.onload = function() {
-	game = new Game(320, 320);
+	game = new Game(600, 320);
 	game.scale = 1.5;
 	game.preload('imgs/main.png', 'imgs/bad.png', 'imgs/space.png', 'imgs/bullet.png');
 	game.keybind(32, 'space');
 	game.fps = 30;
 
 	game.onload = function() {
-		spriteTable = new SpriteTable(100);
+		spriteTable = new SpriteTable(500);
 
 		var bg = new Sprite(1280, 320);
 		bg.image = game.assets["imgs/space.png"];
