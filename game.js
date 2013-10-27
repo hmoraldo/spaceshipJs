@@ -7,51 +7,56 @@ randInt = function(range) {
 	return Math.floor(Math.random()*range);
 }
 
-function SpriteTable(spriteCount) {
-	this.sprites = new Array(spriteCount);
-	for (i = 0; i < spriteCount; i++) {
-		this.sprites[i] = new Sprite(1, 1);
-		this.sprites[i].gameExtras = new Array(0);
-		this.sprites[i].gameExtras.inUse = false;// if true, there is an actual sprite here
+function Character() {
+	this.sprite = new Sprite(1,1);
+}
+
+
+function CharacterTable(characterCount) {
+	this.characters = new Array(characterCount);
+	for (i = 0; i < characterCount; i++) {
+		this.characters[i] = new Character();
+		this.characters[i].gameExtras = new Array(0);
+		this.characters[i].gameExtras.inUse = false;// if true, there is an actual character here
 	}
 }
 
-SpriteTable.prototype.getNewSprite = function() {
-	for (i = 0; i < this.sprites.length; i++) {
-		if (!this.sprites[i].gameExtras.inUse) {
-			this.sprites[i].gameExtras.inUse = true;
-			game.rootScene.addChild(this.sprites[i]);
-			return this.sprites[i];
+CharacterTable.prototype.getNewCharacter = function() {
+	for (i = 0; i < this.characters.length; i++) {
+		if (!this.characters[i].gameExtras.inUse) {
+			this.characters[i].gameExtras.inUse = true;
+			game.rootScene.addChild(this.characters[i].sprite);
+			return this.characters[i];
 		}
 	}
 	return null;
 }
 
-SpriteTable.prototype.freeSprite = function(sprite) {
-	sprite.gameExtras.inUse = false;
-	game.rootScene.removeChild(sprite);
+CharacterTable.prototype.freeCharacter = function(character) {
+	character.gameExtras.inUse = false;
+	game.rootScene.removeChild(character.sprite);
 }
 
 
-initializeBad = function(sprite) {
-	sprite.image = game.assets['imgs/bad.png'];
-	sprite.x = game.width;
-	sprite.y = randInt(game.height);
-	sprite.width = 20;
-	sprite.height = 20;
-	sprite.frame = 2 * randInt(2);// either 0 or 2
-	sprite.gameExtras.characterType = "enemy";
-	sprite.gameExtras.alive = true;
+initializeBad = function(character) {
+	character.sprite.image = game.assets['imgs/bad.png'];
+	character.sprite.x = game.width;
+	character.sprite.y = randInt(game.height);
+	character.sprite.width = 20;
+	character.sprite.height = 20;
+	character.sprite.frame = 2 * randInt(2);// either 0 or 2
+	character.gameExtras.characterType = "enemy";
+	character.gameExtras.alive = true;
 }
 
-initializeBullet = function(sprite, mainChar) {
-	sprite.image = game.assets['imgs/bullet.png'];
-	sprite.x = mainChar.x + mainChar.width;
-	sprite.y = mainChar.y + mainChar.height / 2;
-	sprite.width = 3;
-	sprite.height = 2;
-	sprite.frame = 0;
-	sprite.gameExtras.characterType = "playerBullet";
+initializeBullet = function(character, mainChar) {
+	character.sprite.image = game.assets['imgs/bullet.png'];
+	character.sprite.x = mainChar.sprite.x + mainChar.sprite.width;
+	character.sprite.y = mainChar.sprite.y + mainChar.sprite.height / 2;
+	character.sprite.width = 3;
+	character.sprite.height = 2;
+	character.sprite.frame = 0;
+	character.gameExtras.characterType = "playerBullet";
 }
 
 var bulletSpeed = 3;
@@ -64,48 +69,48 @@ var enemyFallingSpeedY = 2;
 
 doFrame = function() {
 	if (randInt(10) < 2) {
-		var badChar = spriteTable.getNewSprite();
+		var badChar = CharacterTable.getNewCharacter();
 		if (badChar != null) initializeBad(badChar);
 	}
 
-	var spr;
+	var chr;
 
-	for (var i = 0; i < spriteTable.sprites.length; i++) {
-		spr = spriteTable.sprites[i]; 
-		if (spr.gameExtras.inUse) {
-			switch (spr.gameExtras.characterType) {
+	for (var i = 0; i < CharacterTable.characters.length; i++) {
+		chr = CharacterTable.characters[i]; 
+		if (chr.gameExtras.inUse) {
+			switch (chr.gameExtras.characterType) {
 			case  "player":
-				if (spr.gameExtras.alive) {
-					if (spr.gameExtras.framesUntilBullet > 0) spr.gameExtras.framesUntilBullet --;
+				if (chr.gameExtras.alive) {
+					if (chr.gameExtras.framesUntilBullet > 0) chr.gameExtras.framesUntilBullet --;
 
 					if(game.input.left && !game.input.right){
-						spr.x -= playerSpeed;
+						chr.sprite.x -= playerSpeed;
 					} else if(game.input.right && !game.input.left){
-						spr.x += playerSpeed;
+						chr.sprite.x += playerSpeed;
 					}
 
 					if (game.input.up && !game.input.down){
-						spr.y -= playerSpeed;
+						chr.sprite.y -= playerSpeed;
 					} else if(game.input.down && !game.input.up){
-						spr.y += playerSpeed;
+						chr.sprite.y += playerSpeed;
 					}
 
 					// shoot bullets
 					if (game.input.space) {
-						if (spr.gameExtras.framesUntilBullet == 0) {
-							spr.gameExtras.framesUntilBullet = spr.gameExtras.framesBetweenBullets;
-							var bulletChar = spriteTable.getNewSprite();
-							if (bulletChar != null) initializeBullet(bulletChar, spr);
+						if (chr.gameExtras.framesUntilBullet == 0) {
+							chr.gameExtras.framesUntilBullet = chr.gameExtras.framesBetweenBullets;
+							var bulletChar = CharacterTable.getNewCharacter();
+							if (bulletChar != null) initializeBullet(bulletChar, chr);
 						}
 					}
 
 					// check for collision
-					for (var j = 0; j < spriteTable.sprites.length; j++) {
-						var sprEnemy = spriteTable.sprites[j]; 
-						if (sprEnemy.gameExtras.inUse && sprEnemy.gameExtras.characterType == "enemy") {
-							if (spr.intersect(sprEnemy)) {
-								spr.gameExtras.alive = false;
-								spr.frame ++;
+					for (var j = 0; j < CharacterTable.characters.length; j++) {
+						var chrEnemy = CharacterTable.characters[j]; 
+						if (chrEnemy.gameExtras.inUse && chrEnemy.gameExtras.characterType == "enemy") {
+							if (chr.sprite.intersect(chrEnemy.sprite)) {
+								chr.gameExtras.alive = false;
+								chr.sprite.frame ++;
 								break;
 							}
 						}
@@ -113,44 +118,44 @@ doFrame = function() {
 					
 				} else {
 					// not alive
-					spr.x += playerFallingSpeedX;
-					spr.y += playerFallingSpeedY;
+					chr.sprite.x += playerFallingSpeedX;
+					chr.sprite.y += playerFallingSpeedY;
 				}
 				break;
 			case  "enemy":
-				if (spr.gameExtras.alive) {
-					spr.x -= 1;
-					if (spr.x < - spr.width - 2) spriteTable.freeSprite(spr);
+				if (chr.gameExtras.alive) {
+					chr.sprite.x -= 1;
+					if (chr.sprite.x < - chr.sprite.width - 2) CharacterTable.freeCharacter(chr);
 
 					// check for collision with bullets
-					for (var j = 0; j < spriteTable.sprites.length; j++) {
-						var sprBullet = spriteTable.sprites[j]; 
-						if (sprBullet.gameExtras.inUse && sprBullet.gameExtras.characterType == "playerBullet") {
-							if (spr.intersect(sprBullet)) {
-								spr.gameExtras.alive = false;
-								spr.frame ++;
-								spriteTable.freeSprite(sprBullet);// remove bullet
+					for (var j = 0; j < CharacterTable.characters.length; j++) {
+						var chrBullet = CharacterTable.characters[j]; 
+						if (chrBullet.gameExtras.inUse && chrBullet.gameExtras.characterType == "playerBullet") {
+							if (chr.sprite.intersect(chrBullet.sprite)) {
+								chr.gameExtras.alive = false;
+								chr.sprite.frame ++;
+								CharacterTable.freeCharacter(chrBullet);// remove bullet
 								break;
 							}
 						}
 					}
 				} else {
 					// dead enemy
-					spr.x -= enemyFallingSpeedX;
-					spr.y += enemyFallingSpeedY;
-					if (spr.y > game.height) spriteTable.freeSprite(spr);
+					chr.sprite.x -= enemyFallingSpeedX;
+					chr.sprite.y += enemyFallingSpeedY;
+					if (chr.sprite.y > game.height) CharacterTable.freeCharacter(chr);
 				}
 				break;
 			case  "playerBullet":
-				spr.x += bulletSpeed;
-				if (spr.x > game.width) spriteTable.freeSprite(spr);
+				chr.sprite.x += bulletSpeed;
+				if (chr.sprite.x > game.width) CharacterTable.freeCharacter(chr);
 			}
 		}
 	}
 }
 
 var game;
-var spriteTable;
+var CharacterTable;
 
 window.onload = function() {
 	game = new Game(600, 320);
@@ -160,7 +165,7 @@ window.onload = function() {
 	game.fps = 30;
 
 	game.onload = function() {
-		spriteTable = new SpriteTable(500);
+		CharacterTable = new CharacterTable(500);
 
 		var bg = new Sprite(1280, 320);
 		bg.image = game.assets["imgs/space.png"];
@@ -169,13 +174,13 @@ window.onload = function() {
 		game.rootScene.addChild(bg);
 
 
-		var mainChar = spriteTable.getNewSprite();
-		mainChar.frame = 1;
-		mainChar.image = game.assets['imgs/main.png'];
-		mainChar.x = xPos;
-		mainChar.y = yPos;
-		mainChar.width = 20;
-		mainChar.height = 20;
+		var mainChar = CharacterTable.getNewCharacter();
+		mainChar.sprite.frame = 1;
+		mainChar.sprite.image = game.assets['imgs/main.png'];
+		mainChar.sprite.x = xPos;
+		mainChar.sprite.y = yPos;
+		mainChar.sprite.width = 20;
+		mainChar.sprite.height = 20;
 		mainChar.gameExtras.characterType = "player";
 		mainChar.gameExtras.alive = true;
 		mainChar.gameExtras.framesBetweenBullets = 10;
